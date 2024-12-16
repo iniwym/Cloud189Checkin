@@ -8,7 +8,7 @@ on:
     types: started
   workflow_dispatch:
   schedule:
-    - cron: "30 22 * * *" # 北京时间上午06:30
+    - cron: "0 2 * * *" # 北京时间上午10:00
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

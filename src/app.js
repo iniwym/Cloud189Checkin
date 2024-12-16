@@ -19,6 +19,7 @@ const logger = log4js.getLogger();
 const superagent = require("superagent");
 const { CloudClient } = require("cloud189-sdk");
 const serverChan = require("./push/serverChan");
+const larkBot = require("./push/larkBot");
 const telegramBot = require("./push/telegramBot");
 const wecomBot = require("./push/wecomBot");
 const wxpush = require("./push/wxPusher");
@@ -99,6 +100,47 @@ const pushServerChan = (title, desp) => {
       }
     });
 };
+
+// 发送飞书机器人通知
+const pushLarkBot = (title, desp) => {
+  if (!larkBot.larkKey) {
+    logger.warn('飞书机器人LARK_KEY密钥未配置，无法发送通知');
+    return;
+  }
+
+  // 将title和desp合并成一条消息
+  const msg = `${title}\n${desp}`;
+
+  const data = {
+    msg_type: 'text',
+    content: {
+      text: msg,
+    },
+  };
+
+  superagent
+      .post(`https://open.feishu.cn/open-apis/bot/v2/hook/${larkBot.larkKey}`)
+      .set('Content-Type', 'application/json')  // 设置请求头为JSON
+      .send(data)  // 发送JSON数据
+      .end((err, res) => {
+        if (err) {
+          logger.error(`飞书机器人推送失败: ${JSON.stringify(err)}`);
+          return;
+        }
+
+        try {
+          const json = JSON.parse(res.text);
+          if (json.code !== 0) {
+            logger.error(`飞书机器人推送失败: ${JSON.stringify(json)}`);
+          } else {
+            logger.info('飞书机器人推送成功');
+          }
+        } catch (parseErr) {
+          logger.error(`解析飞书机器人响应失败: ${parseErr.message}`);
+        }
+      });
+};
+
 
 const pushTelegramBot = (title, desp) => {
   if (!(telegramBot.botToken && telegramBot.chatId)) {
@@ -189,6 +231,7 @@ const push = (title, desp) => {
   pushTelegramBot(title, desp);
   pushWecomBot(title, desp);
   pushWxPusher(title, desp);
+  pushLarkBot(title, desp);
 };
 
 // 开始执行程序
